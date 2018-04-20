@@ -18,6 +18,7 @@ extern "C" {
     #include "hefty1.h"
     #include "shavite3.h"
     #include "cryptonight.h"
+    #include "cryptonight_dark.h"
     #include "x13.h"
     #include "nist5.h"
     #include "sha1.h",
@@ -574,6 +575,43 @@ Handle<Value> fresh(const Arguments& args) {
     return scope.Close(buff->handle_);
 }
 
+Handle<Value> cryptonight_dark(const Arguments& args) {
+    HandleScope scope;
+
+    bool fast = false;
+    uint32_t cn_variant = 0;
+
+    if (args.Length() < 1)
+        return except("You must provide one argument.");
+
+    if (args.Length() >= 2) {
+        if(args[1]->IsBoolean())
+            fast = args[1]->ToBoolean()->BooleanValue();
+	else if(args[1]->IsUint32())
+            cn_variant = args[1]->ToUint32()->Uint32Value();
+	else
+            return except("Argument 2 should be a boolean or uint32_t");
+    }
+
+    Local<Object> target = args[0]->ToObject();
+
+    if(!Buffer::HasInstance(target))
+        return except("Argument should be a buffer object.");
+
+    char * input = Buffer::Data(target);
+    char output[32];
+
+    uint32_t input_len = Buffer::Length(target);
+
+    if(fast)
+        cryptonight_dark_fast_hash(input, output, input_len);
+    else
+        cryptonight_dark_hash(input, output, input_len, cn_variant);
+
+    Buffer* buff = Buffer::New(output, 32);
+    return scope.Close(buff->handle_);
+}
+
 void init(Handle<Object> exports) {
     exports->Set(String::NewSymbol("quark"), FunctionTemplate::New(quark)->GetFunction());
     exports->Set(String::NewSymbol("x11"), FunctionTemplate::New(x11)->GetFunction());
@@ -591,6 +629,7 @@ void init(Handle<Object> exports) {
     exports->Set(String::NewSymbol("hefty1"), FunctionTemplate::New(hefty1)->GetFunction());
     exports->Set(String::NewSymbol("shavite3"), FunctionTemplate::New(shavite3)->GetFunction());
     exports->Set(String::NewSymbol("cryptonight"), FunctionTemplate::New(cryptonight)->GetFunction());
+    exports->Set(String::NewSymbol("cryptonight_dark"), FunctionTemplate::New(cryptonight_dark)->GetFunction());
     exports->Set(String::NewSymbol("x13"), FunctionTemplate::New(x13)->GetFunction());
     exports->Set(String::NewSymbol("boolberry"), FunctionTemplate::New(boolberry)->GetFunction());
     exports->Set(String::NewSymbol("nist5"), FunctionTemplate::New(nist5)->GetFunction());
